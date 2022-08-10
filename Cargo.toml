@@ -38,12 +38,15 @@ tracing = "0.1.16"
 tracing-attributes = "0.1"
 tracing-futures = "0.2"
 tracing-subscriber = { version = "0.3", features = ["tracing-log"] }
+tracing-opentelemetry = "0.17.4"
 
 tokio-rustls = "*"
 hyper-rustls = { version = "0.23", features = ["http2"] }
 rustls-pemfile = "*"
 tower-http = { version = "0.3", features = ["add-extension", "util"] }
 
+opentelemetry = { version = "0.17.0", features = ["rt-tokio", "rt-async-std"]}
+opentelemetry-otlp = { version = "0.10.0", features = ["grpc-sys"] }
 
 [build-dependencies]
 tonic-build = { version = "0.8", features = ["prost"] }

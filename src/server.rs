@@ -14,6 +14,10 @@ use pb::{second_echo_client::SecondEchoClient};
 type EchoResult<T> = Result<Response<T>, Status>;
 type ResponseStream = Pin<Box<dyn Stream<Item = Result<EchoResponse, Status>> + Send>>;
 
+use tracing::{ span, trace, Level };
+use opentelemetry::trace::TraceContextExt;
+use tracing_opentelemetry::OpenTelemetrySpanExt;
+
 #[derive(Debug)]
 pub struct EchoServer {
     addr: SocketAddr,
@@ -22,14 +26,20 @@ pub struct EchoServer {
 #[tonic::async_trait]
 impl pb::echo_server::Echo for EchoServer {
     async fn unary_echo(&self, request: Request<EchoRequest>) -> EchoResult<EchoResponse> {
-        
+        let root = span!(Level::INFO, "EchoMiddleServer unary_echo");
+        let _enter = root.enter();
+        trace!("Got a request: {:?}", request);
+
         let mut client = SecondEchoClient::connect("http://[::1]:50053").await.unwrap();
 
         let response = client.second_unary_echo(request).await?;
-        let message = format!("{} (from {})", response.into_inner().message, self.addr);
-        println!("EchoService message == {}", message);
+        let parsed_response = response.into_inner();
+        let trace_id = parsed_response.trace_id;
+        let message = format!("trace-id [{}]: {} (from {}), pre trace-id: {}", 
+            root.context().span().span_context().trace_id(), parsed_response.message, self.addr, trace_id);
+        trace!("EchoService message == {}", message);
 
-        Ok(Response::new(EchoResponse { message }))
+        Ok(Response::new(EchoResponse { message, trace_id }))
     }
 
     type ServerStreamingEchoStream = ResponseStream;
@@ -60,31 +70,34 @@ impl pb::echo_server::Echo for EchoServer {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addrs = ["[::1]:50051", "[::1]:50052"];
+    let optl_tracer = load_balance::OpentelemetryTracer::new(Some("Middle Server service"), None);
+    {
+        let enter = optl_tracer.m_span.enter();
 
-    let (tx, mut rx) = mpsc::unbounded_channel();
+        let addrs = ["[::1]:50051", "[::1]:50052"];
 
-    for addr in &addrs {
-        //let mut client = EchoClient::connect("http://[::1]:50053").await?;
+        let (tx, mut rx) = mpsc::unbounded_channel();
 
-        let addr = addr.parse()?;
-        let tx = tx.clone();
+        for addr in &addrs {
+            let addr = addr.parse()?;
+            let tx = tx.clone();
 
-        let server = EchoServer { addr };
-        let serve = Server::builder()
-            .add_service(pb::echo_server::EchoServer::new(server))
-            .serve(addr);
+            let server = EchoServer { addr };
+            let serve = Server::builder()
+                .add_service(pb::echo_server::EchoServer::new(server))
+                .serve(addr);
 
-        tokio::spawn(async move {
-            if let Err(e) = serve.await {
-                eprintln!("Error = {:?}", e);
-            }
+            tokio::spawn(async move {
+                if let Err(e) = serve.await {
+                    eprintln!("Error = {:?}", e);
+                }
 
-            tx.send(()).unwrap();
-        });
+                tx.send(()).unwrap();
+            });
+        }
+
+        rx.recv().await;
     }
-
-    rx.recv().await;
 
     Ok(())
 }

@@ -23,11 +23,13 @@
  // EchoRequest is the request for echo.
  message EchoRequest {
    string message = 1;
+   string trace_id = 2;
  }
 
  // EchoResponse is the response for echo.
  message EchoResponse {
    string message = 1;
+   string trace_id = 2;
  }
 
  // Echo is the echo service.
@@ -46,11 +48,13 @@
 
 message SecondEchoRequest {
   string message = 1;
+  string trace_id = 2;
 }
 
 // EchoResponse is the response for echo.
 message SecondEchoResponse {
   string message = 1;
+  string trace_id = 2;
 }
 
 // Echo is the echo service.
