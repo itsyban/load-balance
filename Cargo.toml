@@ -9,11 +9,11 @@ name = "load-balance-client"
 path = "src/client.rs"
 
 [[bin]]
-name = "load-balance-server"
+name = "load-balance-middleserver"
 path = "src/server.rs"
 
 [[bin]]
-name = "load-balance-second"
+name = "load-balance-headserver"
 path = "src/SecondServer.rs"
 
 [dependencies]
@@ -35,9 +35,9 @@ tonic-web = { version = "0.4.0" }
 
 # Tracing
 tracing = "0.1.16"
-tracing-attributes = "0.1"
+tracing-attributes = "0.1.22"
 tracing-futures = "0.2"
-tracing-subscriber = { version = "0.3", features = ["tracing-log"] }
+tracing-subscriber = { version = "0.3.15", features = ["env-filter", "fmt", "json", "time", "tracing-log"] }
 tracing-opentelemetry = "0.17.4"
 
 tokio-rustls = "*"
@@ -45,8 +45,10 @@ hyper-rustls = { version = "0.23", features = ["http2"] }
 rustls-pemfile = "*"
 tower-http = { version = "0.3", features = ["add-extension", "util"] }
 
-opentelemetry = { version = "0.17.0", features = ["rt-tokio", "rt-async-std"]}
+opentelemetry = { version = "0.17.0", features = ["rt-tokio", "rt-async-std", "trace"]}
 opentelemetry-otlp = { version = "0.10.0", features = ["grpc-sys"] }
+
+h2 = "0.3"
 
 [build-dependencies]
 tonic-build = { version = "0.8", features = ["prost"] }

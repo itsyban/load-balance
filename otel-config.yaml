@@ -6,6 +6,7 @@ receivers:
 
 processors:
   batch:
+    send_batch_size: 250000
 
 exporters:
   otlp:
